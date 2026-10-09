@@ -15,7 +15,7 @@ Jeu multijoueur en ligne (2 à 12 joueurs) à jouer depuis le téléphone, en so
 7. Quand tout le monde est éliminé, on passe au Mastergoon suivant. Une **manche** est terminée quand chaque joueur a été Mastergoon une fois (3 manches par défaut).
 
 ### 🃏 Le joker
-Un joueur éliminé a droit à **un joker**. Sur la question de son choix, il doit dire **exactement la même chose** que le Mastergoon. S'il y arrive, il revient dans la partie, sans gagner de point sur cette question.
+Un joueur éliminé peut tenter son **joker à chaque question** : il doit dire **exactement la même chose** que le Mastergoon. S'il y arrive, il revient dans la partie, sans gagner de point sur cette question. Le joker peut être désactivé dans les paramètres de la partie.
 
 ### 👀 Le jugement en direct
 Dès que le temps est écoulé, **toutes les réponses s'affichent pour tout le monde**. Le Mastergoon décide sur le même écran, en direct : « Différent », « Pareil » ou « Invalide ». Ensuite il clique sur **Question suivante**.
@@ -34,7 +34,7 @@ Si les joueurs ne sont pas d'accord avec une décision du Mastergoon, ils peuven
   - temps de réponse
   - nombre de manches
   - nombre maximum de questions par tour
-  - joker utilisable 1 fois par tour ou 1 fois par partie
+  - joker activé ou non
 - Options :
   - **Joueurs différents entre eux** (deux joueurs qui disent pareil sont éliminés)
   - **Bonus rapidité**

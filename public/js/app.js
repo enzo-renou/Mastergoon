@@ -250,7 +250,7 @@
           <li>Une question tombe, par exemple « Donne-moi une couleur ». Le Mastergoon répond <b>en secret</b>.</li>
           <li>Les autres répondent aussi, mais <b>ne doivent pas dire la même chose</b> que lui. Le Mastergoon valide lui-même, donc pas de souci d'orthographe.</li>
           <li>Ceux qui disent pareil sont éliminés. Les survivants gagnent <b>+1 point</b> et on passe à une question plus serrée.</li>
-          <li><b>Joker 🃏</b> : une fois éliminé, tu peux tenter de dire <b>exactement la même chose</b> que le Mastergoon sur la question de ton choix. Si tu réussis, tu reviens dans la partie (sans point pour cette question).</li>
+          <li><b>Joker 🃏</b> : une fois éliminé, tu peux tenter <b>à chaque question</b> de dire <b>exactement la même chose</b> que le Mastergoon. Si tu réussis, tu reviens dans la partie (sans point pour cette question).</li>
           <li>Quand tout le monde est éliminé, on passe au Mastergoon suivant. Le plus de points à la fin gagne.</li>
           <li>Pas d'accord avec le Mastergoon ? <b>Contestez</b> : à la majorité, la décision est renversée.</li>
         </ol>
@@ -345,14 +345,8 @@
           <div><div class="lbl">Manches</div>${stepper('rounds')}<small class="muted">1 manche = chacun est Mastergoon une fois</small></div>
           <div><div class="lbl">Questions max / tour</div>${stepper('maxQuestions')}<small class="muted">Les questions se resserrent au fil du tour</small></div>
         </div>
-        <div class="field">
-          <div class="lbl">Joker 🃏</div>
-          ${seg('jokerScope', [
-            ['turn', '1 par tour'],
-            ['game', '1 par partie'],
-          ])}
-        </div>
         <div class="field toggles">
+          ${toggle('jokerEnabled', 'Joker 🃏', 'Les joueurs éliminés peuvent tenter de revenir à chaque question en disant pareil que le Mastergoon')}
           ${toggle('playersMustDiffer', 'Joueurs différents entre eux', 'Deux joueurs qui disent pareil sont éliminés aussi')}
           ${toggle('speedBonus', 'Bonus rapidité', '+1 point au survivant le plus rapide')}
           ${toggle('showChoices', 'Afficher les réponses possibles', 'Pour les questions très serrées (ex : évolutions de Tiplouf)')}
@@ -518,30 +512,20 @@
         button: S.yourAnswer ? 'Changer' : 'Envoyer',
         sentLabel: '✅ Envoyé :',
       });
-    } else if (S.canJoker && (S.jokerActive || local.jokerOpen)) {
-      clickable = true;
-      panel = answerForm({
-        label: sameMode() ? `🃏 Joker : dis autre chose que ${esc(mgName())} pour revenir !` : `🃏 Joker : devine EXACTEMENT ce que dit ${esc(mgName())} !`,
-        button: 'Tenter',
-        sentLabel: '🃏 Joker joué :',
-        joker: true,
-        cls: 'joker',
-      });
-    } else if (S.canJoker && !S.jokerPassed) {
-      panel = `
-        <div class="joker-offer">
-          <div class="joker-card">🃏</div>
-          <div>
-            <b>Tu es éliminé… mais il te reste ton joker !</b>
-            <p>${sameMode() ? `Dis <b>autre chose</b> que ${esc(mgName())}` : `Dis <b>exactement la même chose</b> que ${esc(mgName())}`} sur cette question et tu reviens dans la partie (sans gagner de point dessus).</p>
-            <div class="row wrap">
-              <button class="btn btn-joker" data-action="use-joker">Utiliser mon joker</button>
-              <button class="btn btn-ghost" data-action="pass-joker">Pas cette fois</button>
-            </div>
-          </div>
-        </div>`;
     } else if (S.canJoker && S.jokerPassed) {
-      panel = `<div class="note">🃏 Tu gardes ton joker pour une prochaine question.</div>`;
+      panel = `<div class="note">🃏 Tu passes ton tour pour cette question. Tu pourras retenter ton joker à la suivante.</div>`;
+    } else if (S.canJoker) {
+      clickable = true;
+      panel =
+        answerForm({
+          label: sameMode()
+            ? `🃏 Tu es éliminé. Joker : dis autre chose que ${esc(mgName())} pour revenir !`
+            : `🃏 Tu es éliminé. Joker : dis EXACTEMENT la même chose que ${esc(mgName())} pour revenir !`,
+          button: 'Tenter',
+          sentLabel: '🃏 Joker joué :',
+          joker: true,
+          cls: 'joker',
+        }) + (S.jokerActive ? '' : '<button class="btn btn-ghost btn-pass" data-action="pass-joker">Passer cette question</button>');
     } else {
       panel = `<div class="note">💀 Tu es éliminé pour ce tour. Profite du spectacle 🍿</div>`;
     }
@@ -732,12 +716,12 @@
       .map((p) => {
         const isMgP = p.id === S.mastergoonId;
         const dead = !isMgP && !p.alive;
-        const joker = !isMgP && !p.jokerUsed;
+        const joker = S.settings.jokerEnabled && dead;
         return `<div class="sp ${dead ? 'dead' : ''} ${isMgP ? 'is-mg' : ''} ${p.connected ? '' : 'off'} ${p.id === S.you ? 'mine' : ''}">
           ${avatarHtml(p)}
           <span class="sp-name">${esc(p.name)}</span>
           <span class="sp-score">${p.score}</span>
-          <span class="sp-icons">${isMgP ? '🎤' : ''}${dead ? '💀' : ''}${joker ? '<span title="Joker disponible">🃏</span>' : ''}${p.connected ? '' : '📴'}${S.phase === 'answering' && p.answered ? '✓' : ''}</span>
+          <span class="sp-icons">${isMgP ? '🎤' : ''}${dead ? '💀' : ''}${joker ? '<span title="Peut tenter son joker">🃏</span>' : ''}${p.connected ? '' : '📴'}${S.phase === 'answering' && p.answered ? '✓' : ''}</span>
         </div>`;
       })
       .join('')}</aside>`;

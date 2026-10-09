@@ -443,3 +443,5 @@ body.tv .note { display: none; }
 .contest-warn { margin-top: 8px; font-size: 0.8rem; font-weight: 700; color: var(--gold); }
 body.tv .jlist { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
 body.tv .jrow .rtext { font-size: 1.8rem; }
+
+.btn-pass { display: block; margin: -4px auto 14px; }

@@ -26,7 +26,7 @@ const DEFAULT_SETTINGS = {
   playersMustDiffer: false,
   speedBonus: false,
   showChoices: true,
-  jokerScope: 'turn', // 'turn' | 'game'
+  jokerEnabled: true, // joker illimité pour les joueurs éliminés
   customQuestions: [],
 };
 
@@ -209,8 +209,7 @@ class Room {
     if (patch.rounds !== undefined) s.rounds = Math.min(10, Math.max(1, parseInt(patch.rounds, 10) || 3));
     if (patch.maxQuestions !== undefined) s.maxQuestions = Math.min(20, Math.max(3, parseInt(patch.maxQuestions, 10) || 10));
     if (patch.mode !== undefined) s.mode = patch.mode === 'same' ? 'same' : 'different';
-    if (patch.jokerScope !== undefined) s.jokerScope = patch.jokerScope === 'game' ? 'game' : 'turn';
-    for (const k of ['playersMustDiffer', 'speedBonus', 'showChoices']) {
+    for (const k of ['playersMustDiffer', 'speedBonus', 'showChoices', 'jokerEnabled']) {
       if (patch[k] !== undefined) s[k] = !!patch[k];
     }
     if (Array.isArray(patch.customQuestions)) {
@@ -293,7 +292,6 @@ class Room {
     this.qIndex = 0;
     for (const p of this.active()) {
       p.alive = true;
-      if (this.settings.jokerScope === 'turn') p.jokerUsed = false;
     }
     this.turnLog = { manche: this.manche, mastergoonId: mg.id, mgName: mg.name, mgAvatar: mg.avatar, questions: [], firstOutDone: false };
     this.history.push(this.turnLog);
@@ -310,7 +308,9 @@ class Room {
   }
 
   jokerEligible() {
-    return this.active().filter((p) => p.id !== this.mastergoonId && !p.alive && !p.jokerUsed);
+    // joker illimité : tout joueur éliminé peut le tenter à chaque question
+    if (!this.settings.jokerEnabled) return [];
+    return this.active().filter((p) => p.id !== this.mastergoonId && !p.alive);
   }
 
   questionPool() {
@@ -372,10 +372,7 @@ class Room {
       const p = this.get(pid);
       const canJoker = this.jokerEligible().some((x) => x.id === pid) || this.jokerAnswers[pid];
       if (!p || !canJoker) return;
-      if (!this.jokerAnswers[pid]) {
-        p.jokerUsed = true;
-        p.stats.jokerTries++;
-      }
+      if (!this.jokerAnswers[pid]) p.stats.jokerTries++;
       this.jokerAnswers[pid] = { text: t, at };
       this.jokerPass.delete(pid);
     } else {
