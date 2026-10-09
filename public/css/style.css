@@ -428,3 +428,18 @@ body.tv .note { display: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-delay: 0ms !important; transition: none !important; }
 }
+
+/* ---------- Écran de jugement (réponses visibles par tous) ---------- */
+.jlist { list-style: none; padding: 0; margin: 10px 0 8px; display: grid; gap: 10px; }
+.jrow { background: var(--card); border: 2px solid var(--line); border-radius: 16px; padding: 10px 12px; display: flex; align-items: center; gap: 10px; transition: border-color 0.2s, background 0.2s; }
+.jrow.is-judge { flex-direction: column; align-items: stretch; }
+.jrow.anim { animation: flipIn 0.45s cubic-bezier(.2,1.4,.4,1) both; }
+.jrow .jtop { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.jrow.is-judge .vbtns { margin-top: 10px; }
+.jrow.v-out, .jrow.v-fail { border-color: color-mix(in srgb, var(--pink) 60%, transparent); background: color-mix(in srgb, var(--pink) 9%, var(--card)); }
+.jrow.v-survive { border-color: color-mix(in srgb, var(--lime) 50%, transparent); }
+.jrow.v-revive { border-color: var(--joker); background: color-mix(in srgb, var(--joker) 14%, var(--card)); }
+.jrow.mine { box-shadow: 0 0 0 2px var(--cyan); }
+.contest-warn { margin-top: 8px; font-size: 0.8rem; font-weight: 700; color: var(--gold); }
+body.tv .jlist { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+body.tv .jrow .rtext { font-size: 1.8rem; }

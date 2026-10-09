@@ -14,8 +14,7 @@ const MAX_PLAYERS = 12;
 const MAX_ANSWER = 40;
 
 const TURN_INTRO_MS = 4000;
-const VALIDATION_TIMEOUT_MS = 90000;
-const REVEAL_TIMEOUT_MS = 60000;
+const JUDGING_TIMEOUT_MS = 120000; // sécurité si le Mastergoon ne clique jamais sur « suivant »
 const TURN_END_TIMEOUT_MS = 20000;
 
 const DEFAULT_SETTINGS = {
@@ -422,7 +421,7 @@ class Room {
         if (p) p.jokerUsed = false;
       }
       this.phase = 'reveal';
-      this.setTimer(REVEAL_TIMEOUT_MS, () => this.advance(null, true));
+      this.setTimer(JUDGING_TIMEOUT_MS, () => this.advance(null, true));
       this.emit();
       return;
     }
@@ -458,14 +457,9 @@ class Room {
       const ok = mode === 'different' ? same : !same;
       this.decisions[pid] = { verdict: ok ? 'revive' : 'fail', reason: null, joker: true };
     }
-    const needsValidation = Object.values(this.decisions).some((d) => !d.locked);
-    if (needsValidation) {
-      this.phase = 'validating';
-      this.setTimer(VALIDATION_TIMEOUT_MS, () => this.confirmValidation(null, true));
-    } else {
-      this.phase = 'reveal';
-      this.setTimer(REVEAL_TIMEOUT_MS, () => this.advance(null, true));
-    }
+    // Toutes les réponses sont affichées à tout le monde, le Mastergoon juge en direct
+    this.phase = 'reveal';
+    this.setTimer(JUDGING_TIMEOUT_MS, () => this.advance(null, true));
     this.emit();
   }
 
@@ -481,9 +475,11 @@ class Room {
   }
 
   setDecision(by, pid, verdict) {
-    if (this.phase !== 'validating' || !this.isValidator(by)) return;
+    if (this.phase !== 'reveal' || this.mgTimeout || !this.isValidator(by)) return;
     const d = this.decisions[pid];
     if (!d || d.locked) return;
+    // la décision change : les votes de contestation repartent de zéro
+    delete this.contests[pid];
     if (d.joker) {
       if (!['revive', 'fail'].includes(verdict)) return;
       this.decisions[pid] = { ...d, verdict };
@@ -496,13 +492,9 @@ class Room {
     this.emit();
   }
 
-  confirmValidation(by, auto = false) {
-    if (this.phase !== 'validating') return;
-    if (!auto && !this.isValidator(by)) return;
-    this.contests = {};
-    this.phase = 'reveal';
-    this.setTimer(REVEAL_TIMEOUT_MS, () => this.advance(null, true));
-    this.emit();
+  confirmValidation(by) {
+    // ancien bouton « Révéler » : équivaut maintenant à « Question suivante »
+    this.advance(by);
   }
 
   eligibleVoters(targetId) {
@@ -612,7 +604,7 @@ class Room {
 
   skipTurn(by) {
     if (by !== this.hostId) return;
-    if (['turnIntro', 'answering', 'validating', 'reveal'].includes(this.phase)) this.endTurn();
+    if (['turnIntro', 'answering', 'reveal'].includes(this.phase)) this.endTurn();
   }
 
   endGame() {
@@ -716,7 +708,7 @@ class Room {
           jokerPassed: this.jokerPass.has(p.id),
         })),
     };
-    if (this.question && ['answering', 'validating', 'reveal'].includes(phase)) {
+    if (this.question && ['answering', 'reveal'].includes(phase)) {
       v.question = {
         text: this.question.text,
         level: this.question.level,
@@ -757,15 +749,9 @@ class Room {
           flipped: this.isFlipped(pid),
         };
       });
-    if (phase === 'validating') {
+    if (reveal) {
       v.validatorId = this.isValidator(mgId) ? mgId : this.hostId;
       v.youValidate = !!(me && this.isValidator(me.id));
-      if (v.youValidate) {
-        v.mgAnswer = this.mgAnswer;
-        v.entries = entries();
-      }
-    }
-    if (reveal) {
       v.mgAnswer = this.mgAnswer;
       v.mgTimeout = this.mgTimeout;
       v.entries = entries();

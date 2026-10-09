@@ -8,6 +8,10 @@ const CATEGORIES = [
   { id: 'food', label: 'Bouffe', emoji: '🍕' },
   { id: 'animals', label: 'Animaux', emoji: '🐾' },
   { id: 'pokemon', label: 'Pokémon', emoji: '⚡' },
+  { id: 'games', label: 'Jeux vidéo', emoji: '🎮' },
+  { id: 'lol', label: 'League of Legends', emoji: '🗡️' },
+  { id: 'cars', label: 'Voitures', emoji: '🚗' },
+  { id: 'anime', label: 'Manga & anime', emoji: '🍥' },
   { id: 'cinema', label: 'Films & séries', emoji: '🎬' },
   { id: 'sport', label: 'Sport', emoji: '⚽' },
   { id: 'music', label: 'Musique', emoji: '🎵' },
@@ -150,6 +154,10 @@ const RAW = {
     [5, 'Donne-moi une figure du jeu de cartes', ['Valet', 'Dame', 'Roi']],
   ],
 };
+
+// fusion avec le pack de questions supplémentaires
+const MORE = require('./questions-more');
+for (const [cat, list] of Object.entries(MORE)) RAW[cat] = [...(RAW[cat] || []), ...list];
 
 const QUESTIONS = [];
 for (const [cat, list] of Object.entries(RAW)) {

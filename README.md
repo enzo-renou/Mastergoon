@@ -17,8 +17,11 @@ Jeu multijoueur en ligne (2 à 12 joueurs) à jouer depuis le téléphone, en so
 ### 🃏 Le joker
 Un joueur éliminé a droit à **un joker**. Sur la question de son choix, il doit dire **exactement la même chose** que le Mastergoon. S'il y arrive, il revient dans la partie, sans gagner de point sur cette question.
 
+### 👀 Le jugement en direct
+Dès que le temps est écoulé, **toutes les réponses s'affichent pour tout le monde**. Le Mastergoon décide sur le même écran, en direct : « Différent », « Pareil » ou « Invalide ». Ensuite il clique sur **Question suivante**.
+
 ### ⚖️ La contestation
-Si les joueurs ne sont pas d'accord avec une décision du Mastergoon, ils peuvent la contester pendant la révélation. Si une majorité des joueurs conteste, la décision est renversée.
+Si les joueurs ne sont pas d'accord avec une décision du Mastergoon, ils peuvent la contester pendant le jugement. Si une majorité des joueurs conteste, la décision est renversée. Quand le Mastergoon change sa décision, les votes repartent de zéro.
 
 ## Fonctionnalités
 
@@ -38,6 +41,7 @@ Si les joueurs ne sont pas d'accord avec une décision du Mastergoon, ils peuven
   - **Afficher les réponses possibles**
   - **Mode inversé « Dire pareil »**
 - **Questions perso** : niveau de difficulté et réponses possibles optionnels, import/export en JSON, sauvegarde dans le navigateur de l'hôte
+- **436 questions** dans 13 catégories : Culture G, Géographie, Bouffe, Animaux, Pokémon, Jeux vidéo, League of Legends, Voitures, Manga & anime, Films & séries, Sport, Musique, Vie quotidienne
 - Sons, vibrations, réactions emoji en direct
 - Écran de fin avec **podium**, **trophées** (Le plus prévisible, Survivant ultime, Roi du joker, Éclair, Kamikaze, Le dormeur) et **récap** de toutes les réponses
 - L'hôte peut **exclure** un joueur ou **passer un tour** si quelqu'un est parti
@@ -87,7 +91,8 @@ git push -u origin main
 server/
   index.js      serveur Express + Socket.io (salles, événements)
   game.js       logique d'une partie (phases, joker, points, contestation, trophées)
-  questions.js  banque de questions (catégories × niveaux 1 à 5)
+  questions.js       catégories + banque de questions (niveaux 1 à 5)
+  questions-more.js  pack supplémentaire (Pokémon, jeux vidéo, LoL, voitures, manga…)
 public/
   index.html
   css/style.css

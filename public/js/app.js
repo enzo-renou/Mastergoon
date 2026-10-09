@@ -159,25 +159,28 @@
       if (st.phase === 'turnIntro') Sound.mastergoon();
       if (st.phase === 'gameEnd') Sound.fanfare();
       if (st.phase === 'reveal') scheduleRevealSounds(st);
+      if (pPhase === 'reveal' && prev && !prev.mgTimeout) playMyResult(prev);
     }
   }
 
   function scheduleRevealSounds(st) {
     if (revealStarts[st.revealKey]) return;
     revealStarts[st.revealKey] = Date.now();
-    if (st.mgTimeout) return;
-    setTimeout(() => Sound.pop(), 250);
-    st.entries.forEach((e, i) => {
-      setTimeout(() => {
-        const v = e.finalVerdict;
-        if (v === 'survive') Sound.survive();
-        else if (v === 'revive') Sound.joker();
-        else Sound.eliminated();
-        if (e.pid === st.you && navigator.vibrate) navigator.vibrate(v === 'out' || v === 'fail' ? [80, 60, 80] : 40);
-      }, revealDelay(i) * 1000 + 150);
-    });
+    if (!st.mgTimeout) setTimeout(() => Sound.pop(), 150);
   }
-  const revealDelay = (i) => 1.1 + i * 0.75;
+
+  // son + vibration selon ce qui t'arrive quand on passe à la suite
+  function playMyResult(prev) {
+    const mine = prev.entries && prev.entries.find((e) => e.pid === prev.you);
+    if (!mine) return;
+    const v = mine.finalVerdict;
+    if (v === 'survive') Sound.survive();
+    else if (v === 'revive') Sound.joker();
+    else Sound.eliminated();
+    if (navigator.vibrate) navigator.vibrate(v === 'out' || v === 'fail' ? [80, 60, 80] : 40);
+    if (v === 'out' || v === 'fail') toast(v === 'fail' ? '🃏 Joker raté…' : '💀 Tu es éliminé !');
+    if (v === 'revive') toast('🃏 Joker réussi, tu es de retour !');
+  }
 
   // ---------- Rendu ----------
   function render() {
@@ -421,9 +424,6 @@
       case 'answering':
         body = viewAnswering();
         break;
-      case 'validating':
-        body = viewValidating();
-        break;
       case 'reveal':
         body = viewReveal();
         break;
@@ -579,40 +579,6 @@
     );
   }
 
-  function viewValidating() {
-    if (!S.youValidate) {
-      return `
-        <section class="suspense">
-          ${questionHead()}
-          <div class="suspense-box">
-            <div class="spinner"></div>
-            <p><b>${esc((P(S.validatorId) || {}).name || mgName())}</b> vérifie les réponses…</p>
-          </div>
-        </section>`;
-    }
-    return `
-      <section class="validate">
-        ${questionHead()}
-        <div class="mg-answer small"><span>Ta réponse</span><b>${esc(S.mgAnswer)}</b></div>
-        <p class="muted small">${
-          sameMode() ? 'Vérifie qui a bien dit la même chose que toi.' : 'Vérifie qui a dit la même chose que toi (les fautes d\'orthographe, c\'est toi qui juges).'
-        } Les suggestions sont pré-cochées.</p>
-        <ul class="vlist">
-          ${S.entries
-            .map((e) => {
-              const p = P(e.pid);
-              return `<li class="${e.joker ? 'is-joker' : ''}">
-                <div class="vwho">${avatarHtml(p)} <span>${esc(p ? p.name : '?')}</span>${e.joker ? '<span class="tag tag-joker">Joker</span>' : ''}</div>
-                <div class="vtext">${e.text ? esc(e.text) : '<i class="muted">—</i>'}</div>
-                <div class="vbtns">${verdictButtons(e)}</div>
-              </li>`;
-            })
-            .join('')}
-        </ul>
-        <button class="btn btn-primary btn-big" data-action="confirm-validation">Révéler les résultats</button>
-      </section>`;
-  }
-
   function verdictBadge(e) {
     const v = e.finalVerdict;
     if (e.locked) return '<span class="badge out">⏰ Trop tard</span>';
@@ -624,11 +590,13 @@
     return '<span class="badge out">💀 Éliminé</span>';
   }
 
+  // Écran unique : toutes les réponses visibles par tous, le Mastergoon juge en direct
   function viewReveal() {
-    // si l'écran est redessiné pendant l'animation, on la reprend où elle en était
     const elapsed = (Date.now() - (revealStarts[S.revealKey] || 0)) / 1000;
-    const animate = elapsed < revealDelay(S.entries ? S.entries.length : 0) + 1;
+    const animate = elapsed < 2;
     const mg = P(S.mastergoonId);
+    const judge = S.youValidate;
+    const judgeName = esc((P(S.validatorId) || {}).name || mgName());
     if (S.mgTimeout) {
       return `<section class="reveal">
         ${questionHead()}
@@ -639,27 +607,37 @@
     const rows = S.entries
       .map((e, i) => {
         const p = P(e.pid);
-        const style = animate ? `style="animation-delay:${(revealDelay(i) - elapsed).toFixed(2)}s"` : '';
+        const style = animate ? `style="animation-delay:${(0.25 + i * 0.12 - elapsed).toFixed(2)}s"` : '';
         const contest =
           !S.isTv && (e.canContest || e.contests)
             ? `<button class="contest ${e.youContested ? 'on' : ''}" data-action="contest" data-id="${e.pid}" ${e.canContest ? '' : 'disabled'} title="Contester cette décision">⚖️ ${e.contests}/${e.eligible}</button>`
             : '';
-        return `<li class="rrow v-${e.finalVerdict} ${animate ? 'anim' : ''} ${e.pid === S.you ? 'mine' : ''}" ${style}>
-          ${avatarHtml(p)}
-          <div class="rmain"><span class="rname">${esc(p ? p.name : '?')}${e.joker ? ' <span class="tag tag-joker">Joker</span>' : ''}</span><span class="rtext">${e.text ? esc(e.text) : '<i>—</i>'}</span></div>
-          <div class="rside">${verdictBadge(e)}${e.flipped ? '<span class="flipped">Renversé par vote</span>' : ''}${contest}</div>
+        const side = judge
+          ? `<div class="vbtns">${verdictButtons(e)}</div>${e.contests ? `<div class="contest-warn">⚖️ ${e.contests}/${e.eligible} joueur(s) contestent ta décision${e.flipped ? ' : elle sera renversée' : ''}</div>` : ''}`
+          : `<div class="rside">${verdictBadge(e)}${e.flipped ? '<span class="flipped">Renversé par vote</span>' : ''}${contest}</div>`;
+        return `<li class="jrow v-${e.finalVerdict} ${judge ? 'is-judge' : ''} ${animate ? 'anim' : ''} ${e.pid === S.you ? 'mine' : ''}" ${style}>
+          <div class="jtop">
+            ${avatarHtml(p)}
+            <div class="rmain"><span class="rname">${esc(p ? p.name : '?')}${e.joker ? ' <span class="tag tag-joker">Joker</span>' : ''}</span><span class="rtext">${e.text ? esc(e.text) : '<i class="muted">pas de réponse</i>'}</span></div>
+          </div>
+          ${side}
         </li>`;
       })
       .join('');
+    const hint = judge
+      ? sameMode()
+        ? 'Indique qui a dit la même chose que toi. Les suggestions sont pré-cochées.'
+        : "Indique qui a dit la même chose que toi (l'orthographe, c'est toi qui juges). Les suggestions sont pré-cochées."
+      : `<b>${judgeName}</b> juge les réponses en direct. Pas d'accord ? Contestez ⚖️ : à la majorité, la décision est renversée.`;
     return `
       <section class="reveal">
         ${questionHead()}
-        <div class="mg-answer ${animate ? 'anim' : ''}" ${animate ? `style="animation-delay:${(0.15 - elapsed).toFixed(2)}s"` : ''}>
-          <span>${avatarHtml(mg)} ${esc(mgName())} a dit</span>
+        <div class="mg-answer ${animate ? 'anim' : ''}">
+          <span>${avatarHtml(mg)} ${judge && S.you === S.mastergoonId ? 'Ta réponse' : `${esc(mgName())} a dit`}</span>
           <b>${esc(S.mgAnswer)}</b>
         </div>
-        <ul class="rlist">${rows}</ul>
-        ${S.entries.some((e) => !e.locked) && !S.isTv ? '<p class="muted small center">Pas d\'accord avec une décision ? Contestez-la ⚖️ : à la majorité, elle est renversée.</p>' : ''}
+        ${S.isTv ? '' : `<p class="muted small center">${hint}</p>`}
+        <ul class="jlist">${rows || '<li class="note">Personne n\'a répondu.</li>'}</ul>
         ${advanceBtn('Question suivante →')}
       </section>`;
   }
@@ -1010,9 +988,6 @@
     },
     decide(el) {
       socket.emit('decide', { pid: el.dataset.id, verdict: el.dataset.verdict });
-    },
-    'confirm-validation'() {
-      socket.emit('confirmValidation');
     },
     contest(el) {
       socket.emit('contest', el.dataset.id);
